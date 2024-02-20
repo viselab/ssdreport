@@ -1,7 +1,7 @@
 import sys
 import xlsxwriter
 
-# Ipotizziamo di ricevere i dati da qualche parte del tuo script o del tuo playbook Ansible
+# Ipotizziamo di ricevere i dati da Ansible
 hostname = 'rhel7to8-02'
 sssd_status = 'Config OK'
 sssd_values = ['GSS_Unix_Administrators', 'GRA_PREP_ADOPT_Admins@adgr.net', 'GRAP_ADOPT_PREP_EXT@adgr.net']
