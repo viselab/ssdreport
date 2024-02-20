@@ -1,18 +1,18 @@
-import sys
 import xlsxwriter
 
-# Prendi i parametri dalla riga di comando
-hostname = sys.argv[1]
-sssd_status = sys.argv[2]
+# Ipotizziamo di ricevere i dati da qualche parte del tuo script o del tuo playbook Ansible
+hostname = 'rhel7to8-02'
+sssd_status = 'Config OK'
+sssd_values = ['GSS_Unix_Administrators', 'GRA_PREP_ADOPT_Admins@adgr.net', 'GRAP_ADOPT_PREP_EXT@adgr.net']
 
 # Definisci il percorso del file Excel
-report_file = f"/root/report/{hostname}.ADGroup_conf.xlsx"
+report_file = f"/root/report/{hostname}_sssd_report.xlsx"
 
 # Crea un nuovo file Excel e aggiungi un foglio di lavoro
 workbook = xlsxwriter.Workbook(report_file)
 worksheet = workbook.add_worksheet()
 
-# Imposta la formattazione delle intestazioni e dei dati
+# Imposta la formattazione delle intestazioni
 header_format = workbook.add_format({
     'bold': True,
     'align': 'center',
@@ -21,6 +21,7 @@ header_format = workbook.add_format({
     'border': 1
 })
 
+# Imposta la formattazione dei dati
 data_format = workbook.add_format({
     'align': 'center',
     'valign': 'vcenter',
@@ -28,24 +29,23 @@ data_format = workbook.add_format({
     'border': 1
 })
 
-# Scrivi le intestazioni delle colonne
+# Scrivi le intestazioni delle colonne con la formattazione delle intestazioni
 worksheet.write('A1', 'Hostname', header_format)
 worksheet.write('B1', 'AD Configuration Status', header_format)
 worksheet.write('C1', 'AD Group', header_format)
 
-# Scrivi i dati dell'host e lo stato della configurazione
+# Scrivi i dati con la formattazione dei dati
 worksheet.write('A2', hostname, data_format)
 worksheet.write('B2', sssd_status, data_format)
 
-# Assumi che i valori di AD Group siano separati da virgola
-ad_groups = sssd_status.split(',')
-
 # Scrivi ogni gruppo AD in una nuova riga
-for row, group in enumerate(ad_groups, start=2):
-    worksheet.write(row, 2, group.strip(), data_format)
+for row_num, group in enumerate(sssd_values, start=2):
+    worksheet.write(row_num, 2, group, data_format)
 
-# Imposta la larghezza delle colonne
-worksheet.set_column('A:C', 30)
+# Imposta la larghezza delle colonne per migliorare la leggibilità
+worksheet.set_column('A:A', 20)
+worksheet.set_column('B:B', 25)
+worksheet.set_column('C:C', 40)
 
 # Chiudi il file Excel
 workbook.close()
