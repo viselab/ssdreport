@@ -1,0 +1,83 @@
+- name: Setup Environment for Excel Report Generation
+  hosts: web_servers
+  become: yes
+  tasks:
+    - name: Determine RHEL version and appropriate Python interpreter
+      set_fact:
+        is_rhel_8_or_later: "{{ ansible_facts['distribution_major_version'] | int >= 8 }}"
+
+    - name: Install Python3 and pip for RHEL 7 using yum
+      yum:
+        name:
+          - python36
+          - python36-pip
+        state: present
+      when: not is_rhel_8_or_later
+
+    - name: Install Python3 and pip for RHEL 8 or later using dnf
+      dnf:
+        name:
+          - python3
+          - python3-pip
+        state: present
+      when: is_rhel_8_or_later
+
+    - name: Install XlsxWriter using pip3
+      pip:
+        name: XlsxWriter
+        executable: pip3
+
+- name: Gather SSSD Configuration Data from All Hosts
+  hosts: web_servers
+  gather_facts: false
+  tasks:
+    - name: Check SSSD configuration
+      shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'"
+      register: sssd_check_result
+
+    - name: Store results in a fact
+      set_fact:
+        sssd_data: "{{ sssd_data | default([]) + [{ 'hostname': ansible_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout }] }}"
+      delegate_to: localhost
+
+- name: Generate a Single Excel report for all SSSD configurations
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Generate Excel report using Python script
+      command: "python3 /path/to/generate_sssd_report_excel.py '{{ sssd_data }}'"
+      delegate_to: localhost
+
+- name: Synchronize Excel Reports to the Local Machine
+  hosts: web_servers
+  gather_facts: false
+  tasks:
+    - name: Synchronize Excel reports to the local machine
+      synchronize:
+        mode: pull
+        src: "{{ report_path_remote }}"
+        dest: "{{ report_path_local }}"
+        recursive: yes
+      delegate_to: localhost
+
+- name: Commit Excel reports to Git repository
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Add Excel reports to Git
+      command: "git add ."
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
+
+    - name: Commit Excel reports to Git
+      command: "git commit -m 'Automatic update Excel Report'"
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
+
+    - name: Push Excel reports to Git
+      command: "git push origin main"
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
