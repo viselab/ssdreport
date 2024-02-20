@@ -61,8 +61,8 @@
   tasks:
     - name: Synchronize Excel reports from remote to local machine
       ansible.builtin.synchronize:
-        src: "/root/report/"
-        dest: "/root/report/"
+        src: "{{report_path_remote}}"
+        dest: "{{ report_path_local }}"
         mode: pull
 
 - name: Commit CSV reports to Git repository
