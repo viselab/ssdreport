@@ -54,9 +54,13 @@
         src: "/tmp/sssd_data_temp"
       register: sssd_data_file
 
-    - name: Decode SSSD data
+    - name: Decode SSSD data from base64
       set_fact:
-        sssd_data: "{{ sssd_data_file['content'] | b64decode.split('\n') | select('!=', '') | list }}"
+        sssd_decoded: "{{ sssd_data_file['content'] | b64decode }}"
+
+    - name: Split SSSD data into lines and remove empty lines
+      set_fact:
+        sssd_data: "{{ sssd_decoded.split('\n') | select('!=', '') | list }}"
 
     - name: Generate Excel report for SSSD configuration using Python script
       command: "python3 ad_report_global.py '{{ sssd_data | to_json }}'"
