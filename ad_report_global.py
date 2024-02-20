@@ -2,44 +2,55 @@ import json
 import sys
 import xlsxwriter
 
-# Ottieni i dati come stringa JSON dal primo argomento della riga di comando
+# Expecting a JSON string from the first command-line argument
 data_json = sys.argv[1]
 
-# Converti la stringa JSON in un oggetto Python
 try:
+    # Convert the JSON string to a Python list of dictionaries
     sssd_data = json.loads(data_json)
 except json.JSONDecodeError as e:
-    print(f"Errore durante il parsing JSON: {e}")
+    print(f"Error decoding JSON: {e}")
     sys.exit(1)
 
-# Definisci il percorso del file Excel
+# Define the path for the Excel report file
 report_file = "/root/report/ADGroup_linux_report.xlsx"
 
-# Crea un nuovo file Excel e aggiungi un foglio di lavoro
+# Create a new Excel workbook and add a worksheet
 workbook = xlsxwriter.Workbook(report_file)
 worksheet = workbook.add_worksheet()
 
-# Definisci la formattazione delle intestazioni e dei dati
-header_format = workbook.add_format({'bold': True, 'align': 'center', 'bg_color': 'yellow'})
-data_format = workbook.add_format({'align': 'center', 'bg_color': 'cyan', 'text_wrap': True})
+# Define formatting for headers and data cells
+header_format = workbook.add_format({
+    'bold': True,
+    'align': 'center',
+    'bg_color': 'yellow',
+    'border': 1
+})
+data_format = workbook.add_format({
+    'align': 'left',
+    'valign': 'top',
+    'text_wrap': True,
+    'border': 1
+})
 
-# Scrivi le intestazioni delle colonne
+# Write the headers to the first row
 worksheet.write('A1', 'Hostname', header_format)
 worksheet.write('B1', 'AD Configuration Status', header_format)
 worksheet.write('C1', 'AD Group', header_format)
 
-# Scrivi i dati a partire dalla seconda riga
+# Start writing data from the second row
 row = 1
 for entry in sssd_data:
+    # Write data into columns A, B, and C
     worksheet.write(row, 0, entry['hostname'], data_format)
     worksheet.write(row, 1, entry['status'], data_format)
-    # Se 'values' è una stringa di gruppi AD separati da virgole, dividi la stringa e uniscila con una virgola e uno spazio
-    groups = ', '.join(entry['values'].split(','))
-    worksheet.write(row, 2, groups, data_format)
+    worksheet.write(row, 2, entry['values'], data_format)  # Assuming 'values' is a string
     row += 1
 
-# Imposta la larghezza delle colonne per la leggibilità
-worksheet.set_column('A:C', 30)
+# Set column widths for clarity
+worksheet.set_column('A:A', 20)  # Hostname
+worksheet.set_column('B:B', 20)  # Status
+worksheet.set_column('C:C', 50)  # Groups
 
-# Chiudi il workbook per salvare il file Excel
+# Close the workbook to save the Excel file
 workbook.close()
