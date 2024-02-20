@@ -51,7 +51,7 @@
 
     - name: Generate Excel report for SSSD configuration using Python script
       ansible.builtin.command:
-        cmd: "python3 /path/to/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+        cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
       delegate_to: localhost
       run_once: true
 
