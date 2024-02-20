@@ -1,50 +1,37 @@
-import xlsxwriter
-import sys
 import json
+import sys
+import xlsxwriter
 
-# Converti la stringa JSON ricevuta in una struttura dati Python
-sssd_data_json = sys.argv[1]
-sssd_data = json.loads(sssd_data_json)
+# Attempt to parse the JSON data passed from the Ansible playbook
+try:
+    sssd_data = json.loads(sys.argv[1])
+except json.JSONDecodeError as e:
+    print(f"Failed to parse JSON data: {e}")
+    sys.exit(1)
 
-# Definisci il percorso del file Excel
+# Define the path for the Excel report
 report_file = "/root/report/ADGroup_linux_report.xlsx"
 
-# Crea un nuovo file Excel e aggiungi un foglio di lavoro
+# Create the Excel workbook and worksheet
 workbook = xlsxwriter.Workbook(report_file)
 worksheet = workbook.add_worksheet()
 
-# Define formatting for headers and data
-header_format = workbook.add_format({
-    'bold': True,
-    'align': 'center',
-    'valign': 'vcenter',
-    'bg_color': 'yellow',  # Yellow background for the headers
-    'border': 1
-})
-data_format = workbook.add_format({
-    'align': 'center',
-    'valign': 'vcenter',
-    'bg_color': 'cyan',  # Cyan background for the data
-    'border': 1,
-    'text_wrap': True  # Wrap text in the cell
-})
+# Define formats for the header and data cells
+header_format = workbook.add_format({'bold': True, 'bg_color': 'yellow', 'align': 'center'})
+data_format = workbook.add_format({'bg_color': 'cyan', 'align': 'center', 'valign': 'top', 'text_wrap': True})
 
-# Write the headers to the first row
+# Write the header row
 worksheet.write('A1', 'Hostname', header_format)
 worksheet.write('B1', 'AD Configuration Status', header_format)
 worksheet.write('C1', 'AD Group', header_format)
 
-# Start writing data from the second row
+# Start at the first data row
 row = 1
-for entry in sssd_data:
-    worksheet.write(row, 0, entry['hostname'], data_format)
-    worksheet.write(row, 1, entry['status'], data_format)
-    # Join the AD groups with a newline character to ensure they are listed properly
-    worksheet.write(row, 2, "\n".join(entry['values']), data_format)
-    row += 1  # Move to the next row for each host
+for item in sssd_data:
+    worksheet.write(row, 0, item['hostname'], data_format)
+    worksheet.write(row, 1, item['status'], data_format)
+    worksheet.write(row, 2, item['values'], data_format)
+    row += 1
 
-# Set the column widths for clarity
-worksheet.set_column('A:C', 30)
-
-# Close the workbook to save the Excel file
+# Close the workbook to finalize the Excel file
 workbook.close()
