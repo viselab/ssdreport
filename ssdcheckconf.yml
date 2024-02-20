@@ -3,60 +3,57 @@
   become: yes
   tasks:
     - name: Determine RHEL version and appropriate Python interpreter
-      ansible.builtin.set_fact:
+      set_fact:
         is_rhel_8_or_later: "{{ ansible_facts['distribution_major_version'] | int >= 8 }}"
+
     - name: Install Python3 and pip for RHEL 7 using yum
-      ansible.builtin.yum:
+      yum:
         name:
           - python36
           - python36-pip
         state: present
       when: not is_rhel_8_or_later
+
     - name: Install Python3 and pip for RHEL 8 or later using dnf
-      ansible.builtin.dnf:
+      dnf:
         name:
           - python3
           - python3-pip
         state: present
       when: is_rhel_8_or_later
+
     - name: Install XlsxWriter using pip3
-      ansible.builtin.pip:
+      pip:
         name: XlsxWriter
         executable: pip3
-- name: Check SSSD Configuration and Generate Excel Report
+
+- name: Generate Excel Report for Each Host
   hosts: web_servers
   gather_facts: false
   tasks:
-    - name: Create destination directory for reports on remote hosts
-      ansible.builtin.file:
-        path: "/root/report"
-        state: directory
     - name: Check SSSD configuration
-      ansible.builtin.shell:
-        cmd: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
+      shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
       register: sssd_check_result
       ignore_errors: yes
-    - name: Create destination directory for reports on localhost
-      ansible.builtin.file:
-        path: "/root/report"
-        state: directory
-      delegate_to: localhost
-      run_once: true
-    - name: Generate Excel report for SSSD configuration using Python script
-      ansible.builtin.command:
-        cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
-      delegate_to: localhost
-      run_once: true
 
-- name: Synchronize Excel Reports to Local Machine
+    - name: Generate Excel report for SSSD configuration using Python script
+      local_action:
+        module: command
+        cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ inventory_hostname }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+      run_once: false
+
+
+- name: Synchronize CSV reports to the local machine
   hosts: web_servers
   gather_facts: false
   tasks:
-    - name: Synchronize Excel reports from remote to local machine
+    - name: Synchronize CSV reports to the local machine
       ansible.builtin.synchronize:
-        src: "{{report_path_remote}}"
-        dest: "{{ report_path_local }}"
         mode: pull
+        src: "{{ report_path_remote }}"
+        dest: "{{ report_path_local }}"
+        recursive: yes
+
 - name: Commit CSV reports to Git repository
   hosts: localhost
   gather_facts: false
@@ -67,4 +64,17 @@
       args:
         chdir: "{{ report_path_local }}"
       ignore_errors: yes
+
     - name: Commit CSV reports to Git
+      ansible.builtin.command:
+        cmd: "git commit -m 'Automatic update CSV Report'"
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
+
+    - name: Push CSV reports to Git
+      ansible.builtin.command:
+        cmd: "git push origin main"
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
