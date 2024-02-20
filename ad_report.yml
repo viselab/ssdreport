@@ -27,49 +27,32 @@
         name: XlsxWriter
         executable: pip3
 
+- name: Setup Environment for Excel Report Generation
+  hosts: web_servers
+  become: yes
+  # ... (le tue tasks di setup come prima)
+
 - name: Gather SSSD Configuration Data from All Hosts
   hosts: web_servers
   gather_facts: false
   tasks:
-    - name: Ensure the collector file exists
-      file:
-        path: /tmp/sssd_data_collector.txt
-        state: touch
+    - name: Check SSSD configuration
+      shell: >
+        grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'
+      register: sssd_check_result
+      changed_when: false
+    - name: Append results to list
+      set_fact:
+        sssd_list: "{{ sssd_list | default([]) + [ { 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A') } ] }}"
       delegate_to: localhost
-      run_once: true
 
-- name: Read SSSD data into a variable
+- name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Read SSSD data from the collector file
-      shell: cat /tmp/sssd_data_collector.txt
-      register: sssd_data_content
-      run_once: true
-
-    - name: Check SSSD configuration
-      shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'"
-      register: sssd_check_result
-      changed_when: false
-
-    - name: Collect SSSD check results
-      lineinfile:
-        path: /tmp/sssd_data_collector.txt
-        line: "{{ inventory_hostname }}:{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}:{{ sssd_check_result.stdout | default('N/A') }}"
-      delegate_to: localhost
-
-    - name: Read SSSD data into a variable
-      shell: "cat /tmp/sssd_data_collector.txt"
-      register: sssd_data_content
-
     - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data_content.stdout }}'"
+      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_list | to_json }}'"
       run_once: true
-
-    - name: Remove the temporary collector file
-      file:
-        path: "/tmp/sssd_data_collector.txt"
-        state: absent
       
 - name: Synchronize Excel Reports to the Local Machine
   hosts: localhost
