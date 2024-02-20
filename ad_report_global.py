@@ -1,21 +1,15 @@
-import sys
 import xlsxwriter
+import sys
 import json
 
-# Read the JSON string from the command line argument
+# Converti la stringa JSON ricevuta in una struttura dati Python
 sssd_data_json = sys.argv[1]
+sssd_data = json.loads(sssd_data_json)
 
-try:
-    # Convert the JSON string to a Python list of dictionaries
-    sssd_data = json.loads(sssd_data_json)
-except json.JSONDecodeError as e:
-    print(f"Error decoding JSON: {e}")
-    sys.exit(1)
-
-# Define the Excel report file path
+# Definisci il percorso del file Excel
 report_file = "/root/report/ADGroup_linux_report.xlsx"
 
-# Create a new Excel file and add a worksheet
+# Crea un nuovo file Excel e aggiungi un foglio di lavoro
 workbook = xlsxwriter.Workbook(report_file)
 worksheet = workbook.add_worksheet()
 
@@ -24,15 +18,15 @@ header_format = workbook.add_format({
     'bold': True,
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': 'yellow',
+    'bg_color': 'yellow',  # Yellow background for the headers
     'border': 1
 })
 data_format = workbook.add_format({
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': 'cyan',
+    'bg_color': 'cyan',  # Cyan background for the data
     'border': 1,
-    'text_wrap': True
+    'text_wrap': True  # Wrap text in the cell
 })
 
 # Write the headers to the first row
@@ -45,11 +39,12 @@ row = 1
 for entry in sssd_data:
     worksheet.write(row, 0, entry['hostname'], data_format)
     worksheet.write(row, 1, entry['status'], data_format)
-    worksheet.write(row, 2, ', '.join(entry['values']), data_format)
-    row += 1
+    # Join the AD groups with a newline character to ensure they are listed properly
+    worksheet.write(row, 2, "\n".join(entry['values']), data_format)
+    row += 1  # Move to the next row for each host
 
-# Set column widths
+# Set the column widths for clarity
 worksheet.set_column('A:C', 30)
 
-# Close the Excel file
+# Close the workbook to save the Excel file
 workbook.close()
