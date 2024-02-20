@@ -1,53 +1,47 @@
 import xlsxwriter
+import json
 import sys
 
-# Ottieni i parametri dalla riga di comando
-hostname = sys.argv[1]
-sssd_status = sys.argv[2]
-sssd_values = sys.argv[3]
+# Carica i dati JSON passati dal playbook
+data = json.loads(sys.argv[1])
 
 # Definisci il percorso del file Excel
-report_file = f"/root/report/{hostname}.ADGroup_report.xlsx"
+report_file = "SSSD_Configuration_Report.xlsx"
 
 # Crea un nuovo file Excel e aggiungi un foglio di lavoro
 workbook = xlsxwriter.Workbook(report_file)
 worksheet = workbook.add_worksheet()
 
-# Imposta la formattazione delle intestazioni
+# Formattazioni
 header_format = workbook.add_format({
     'bold': True,
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': 'yellow',  # Sfondo giallo
+    'bg_color': 'yellow',
     'border': 1
 })
-
-# Imposta la formattazione dei dati
 data_format = workbook.add_format({
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': 'cyan',  # Sfondo celeste
     'border': 1,
-    'text_wrap': True  # Consente di andare a capo automaticamente nel testo
+    'text_wrap': True
 })
 
-# Scrivi le intestazioni delle colonne
-worksheet.write('A1', 'Hostname', header_format)
-worksheet.write('B1', 'AD Configuration Status', header_format)
-worksheet.write('C1', 'AD Group', header_format)
+# Intestazioni delle colonne
+headers = ['Hostname', 'AD Configuration Status', 'AD Group']
+for col, header in enumerate(headers):
+    worksheet.write(0, col, header, header_format)
 
-# Scrivi i dati
-worksheet.write('A2', hostname, data_format)
-worksheet.write('B2', sssd_status, data_format)
+# Scrivi i dati di ogni host nel foglio
+for row, host_data in enumerate(data, start=1):
+    worksheet.write(row, 0, host_data['hostname'], data_format)
+    worksheet.write(row, 1, host_data['status'], data_format)
+    worksheet.write(row, 2, host_data['groups'], data_format)
 
-# Combina tutti i valori di AD Group in una singola stringa separata da newline
-ad_groups = "\n".join(sssd_values.split(','))
-worksheet.write('C2', ad_groups, data_format)
-
-# Imposta la larghezza delle colonne per migliorare la leggibilità
+# Imposta la larghezza delle colonne
 worksheet.set_column('A:A', 20)
 worksheet.set_column('B:B', 25)
 worksheet.set_column('C:C', 40)
 
-# Chiudi il file Excel
+# Chiudi il workbook
 workbook.close()
