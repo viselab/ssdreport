@@ -39,16 +39,14 @@ for row, line in enumerate(data, start=1):
     hostname, status, groups = line.split('|')
     worksheet.write(row, 0, hostname, data_format)
     worksheet.write(row, 1, status, data_format)
-    # Scrivi i gruppi in colonne separate
-    groups_list = groups.split(',')  # Dividi i gruppi per virgola
-    for col, group in enumerate(groups_list, start=2):
-        worksheet.write(row, col, group.strip(), data_format)  # strip() per rimuovere spazi bianchi extra
+    # Unisci tutti i gruppi in una singola stringa separata da virgole
+    groups_combined = ', '.join(groups.split(','))  # Unisce i gruppi e aggiunge una virgola tra di loro
+    worksheet.write(row, 2, groups_combined, data_format)
 
 # Imposta la larghezza delle colonne
 worksheet.set_column('A:A', 20)
 worksheet.set_column('B:B', 25)
-# Imposta una larghezza predefinita per le colonne dei gruppi
-worksheet.set_column('C:Z', 30)
+worksheet.set_column('C:C', 40)
 
 # Chiudi il workbook
 workbook.close()
