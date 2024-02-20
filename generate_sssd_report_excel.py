@@ -1,13 +1,13 @@
-import sys
 import xlsxwriter
+import sys
 
-# Ipotizziamo di ricevere i dati da Ansible
-hostname = 'rhel7to8-02'
-sssd_status = 'Config OK'
-sssd_values = ['GSS_Unix_Administrators', 'GRA_PREP_ADOPT_Admins@adgr.net', 'GRAP_ADOPT_PREP_EXT@adgr.net']
+# Ottieni i parametri dalla riga di comando
+hostname = sys.argv[1]
+sssd_status = sys.argv[2]
+sssd_values = sys.argv[3].split(',')  # Presumiamo che i valori siano separati da virgole
 
 # Definisci il percorso del file Excel
-report_file = f"/root/report/{hostname}_ADGroup_report.xlsx"
+report_file = f"/root/report/{hostname}.ADGroup_report.xlsx"
 
 # Crea un nuovo file Excel e aggiungi un foglio di lavoro
 workbook = xlsxwriter.Workbook(report_file)
@@ -18,7 +18,7 @@ header_format = workbook.add_format({
     'bold': True,
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': '#FFFF00',  # Giallo
+    'bg_color': 'yellow',  # Sfondo giallo
     'border': 1
 })
 
@@ -26,7 +26,7 @@ header_format = workbook.add_format({
 data_format = workbook.add_format({
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': '#00B0F0',  # Celeste
+    'bg_color': 'cyan',  # Sfondo celeste
     'border': 1
 })
 
@@ -35,21 +35,18 @@ worksheet.write('A1', 'Hostname', header_format)
 worksheet.write('B1', 'AD Configuration Status', header_format)
 worksheet.write('C1', 'AD Group', header_format)
 
-# Scrivi i dati con la formattazione dei dati
+# Scrivi il nome dell'host e lo stato della configurazione nelle prime celle
 worksheet.write('A2', hostname, data_format)
 worksheet.write('B2', sssd_status, data_format)
 
 # Scrivi ogni gruppo AD in una nuova riga
-for row_num, group in enumerate(sssd_values, start=2):
-    worksheet.write(row_num, 2, group, data_format)
+start_row = 2
+for value in sssd_values:
+    worksheet.write(start_row, 2, value.strip(), data_format)
+    start_row += 1  # Incrementa il numero di riga per ogni gruppo
 
 # Imposta la larghezza delle colonne per migliorare la leggibilità
-worksheet.set_column('A:A', 20)
-worksheet.set_column('B:B', 25)
-worksheet.set_column('C:C', 40)
-
-# Chiudi il file Excel
-workbook.close()
+worksheet.set_column('A:C', 30)  # Aumenta se necessario
 
 # Chiudi il file Excel
 workbook.close()
