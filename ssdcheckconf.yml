@@ -1,33 +1,29 @@
 - name: Prepare Environment for Excel Report Generation
   hosts: web_servers
-  tasks:
-    - name: Ensure pip is installed
-      ansible.builtin.package:
-        name: python3-pip
-        state: present
-
-- name: Install Python3 and pip
-  hosts: web_servers
-  become: yes
+  become: yes  # Utilizza 'become' per eseguire come superutente
+  vars:
+    ansible_python_interpreter: /usr/bin/python3  # Specifica l'interprete Python
   tasks:
     - name: Ensure Python3 is installed
       ansible.builtin.package:
         name: python3
         state: present
 
-    - name: Ensure pip is installed
+    - name: Ensure pip3 is installed
       ansible.builtin.package:
         name: python3-pip
         state: present
-    
 
-    - name: Install XlsxWriter
+    - name: Install XlsxWriter using pip3
       ansible.builtin.pip:
         name: XlsxWriter
-        state: present
+        executable: pip3  # Specifica esplicitamente di usare pip3
 
 - name: Check SSSD Configuration and Generate Excel Report
   hosts: web_servers
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3  # Assicurati di usare Python 3
   tasks:
     - name: Create destination directory for reports
       ansible.builtin.file:
@@ -35,17 +31,22 @@
         state: directory
 
     - name: Check SSSD configuration
-      ansible.builtin.shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
+      ansible.builtin.shell:
+        cmd: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
       register: sssd_check_result
       ignore_errors: yes
 
-    - name: Generate Excel report for SSSD configuration
-      ansible.builtin.command: "python3 generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+    - name: Generate Excel report for SSSD configuration using Python script
+      ansible.builtin.command:
+        cmd: "python3 generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
       delegate_to: localhost
       run_once: true
 
 - name: Synchronize Excel Reports to Local Machine
   hosts: web_servers
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
   tasks:
     - name: Synchronize Excel reports to the local machine
       ansible.builtin.synchronize:
@@ -55,24 +56,12 @@
 
 - name: Commit Excel Reports to Git Repository
   hosts: localhost
+  gather_facts: false
   tasks:
     - name: Add Excel reports to Git
-      ansible.builtin.command:
-        cmd: "git add ."
-        args:
-          chdir: "{{ report_path_local }}"
-      ignore_errors: yes
-
-    - name: Commit Excel reports to Git
-      ansible.builtin.command:
-        cmd: "git commit -m 'Automatic update Excel Report'"
-        args:
-          chdir: "{{ report_path_local }}"
-      ignore_errors: yes
-
-    - name: Push Excel reports to Git
-      ansible.builtin.command:
-        cmd: "git push origin main"
-        args:
-          chdir: "{{ report_path_local }}"
-      ignore_errors: yes
+      ansible.builtin.git:
+        repo: "{{ local_git_repo_path }}"
+        dest: "{{ report_path_local }}"
+        version: main
+        commit_message: "Updated Excel Reports"
+        force: yes
