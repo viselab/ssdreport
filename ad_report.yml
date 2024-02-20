@@ -42,12 +42,11 @@
         sssd_data: "{{ sssd_data | default([]) + [{ 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A') }] }}"
 
 - name: Generate a Single Excel report for all SSSD configurations
-  hosts: sssd_reports
+  hosts: localhost
   gather_facts: false
   tasks:
     - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/ad_report_global.py '{{ hostvars['localhost']['sssd_data'] }}'"
-
+      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
 
 - name: Synchronize Excel Reports to the Local Machine
   hosts: web_servers
