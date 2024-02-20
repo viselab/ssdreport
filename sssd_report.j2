@@ -1,0 +1,4 @@
+Hostname;SSSD Configuration Status;SSSD Configuration Value
+{% for entry in sssd_configuration_status_data %}
+{{ entry.hostname }};{{ entry.status }};{{ entry.value }}
+{% endfor %}
