@@ -6,7 +6,7 @@ hostname = sys.argv[1]
 sssd_status = sys.argv[2]
 
 # Definisci il percorso del file Excel
-report_file = f"/root/report/{hostname}_sssd_report.xlsx"
+report_file = f"/root/report/{hostname}.ADGroup_conf.xlsx"
 
 # Crea un nuovo file Excel e aggiungi un foglio di lavoro
 workbook = xlsxwriter.Workbook(report_file)
