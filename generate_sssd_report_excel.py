@@ -14,12 +14,12 @@ worksheet = workbook.add_worksheet()
 # Imposta le intestazioni
 worksheet.write('A1', 'Hostname')
 worksheet.write('B1', 'SSSD Configuration Status')
-worksheet.write('C1', 'SSSD AD group')
+worksheet.write('C1', 'SSSD Configuration Value')
 
 # Aggiungi i dati
 worksheet.write('A2', hostname)
 worksheet.write('B2', sssd_status)
-worksheet.write('C2', AD_group_value)
+worksheet.write('C2', sssd_value)
 
 # Chiudi il workbook
 workbook.close()
