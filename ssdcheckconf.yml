@@ -27,7 +27,7 @@
         name: XlsxWriter
         executable: pip3
 
-- name: Generate Excel Report for Each Host
+- name: Check SSSD Configuration and Generate Excel Report for Each Host
   hosts: web_servers
   gather_facts: false
   tasks:
@@ -36,43 +36,41 @@
       register: sssd_check_result
       ignore_errors: yes
 
-- name: Generate Excel report for SSSD configuration using Python script
-  ansible.builtin.command:
-    cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
-  delegate_to: localhost
+    - name: Generate Excel report for SSSD configuration using Python script
+      command: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ inventory_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+      delegate_to: localhost
+      # Non usare run_once per assicurarti che venga eseguito per ogni host
 
-- name: Synchronize CSV reports to the local machine
+- name: Synchronize Excel Reports to the Local Machine
   hosts: web_servers
   gather_facts: false
   tasks:
-    - name: Synchronize CSV reports to the local machine
-      ansible.builtin.synchronize:
+    - name: Synchronize Excel reports to the local machine
+      synchronize:
         mode: pull
         src: "{{ report_path_remote }}"
         dest: "{{ report_path_local }}"
         recursive: yes
+      delegate_to: localhost
 
-- name: Commit CSV reports to Git repository
+- name: Commit Excel reports to Git repository
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Add CSV reports to Git
-      ansible.builtin.command:
-        cmd: "git add ."
+    - name: Add Excel reports to Git
+      command: "git add ."
       args:
         chdir: "{{ report_path_local }}"
       ignore_errors: yes
 
-    - name: Commit CSV reports to Git
-      ansible.builtin.command:
-        cmd: "git commit -m 'Automatic update CSV Report'"
+    - name: Commit Excel reports to Git
+      command: "git commit -m 'Automatic update Excel Report'"
       args:
         chdir: "{{ report_path_local }}"
       ignore_errors: yes
 
-    - name: Push CSV reports to Git
-      ansible.builtin.command:
-        cmd: "git push origin main"
+    - name: Push Excel reports to Git
+      command: "git push origin main"
       args:
         chdir: "{{ report_path_local }}"
       ignore_errors: yes
