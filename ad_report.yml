@@ -41,6 +41,10 @@
       delegate_to: localhost
       run_once: true
 
+    - name: Debug sssd_data
+      debug:
+        var: sssd_data 
+
 - name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
   gather_facts: false
