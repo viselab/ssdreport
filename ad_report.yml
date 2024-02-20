@@ -38,6 +38,15 @@
       delegate_to: localhost
       run_once: true
 
+- name: Read SSSD data into a variable
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Read SSSD data from the collector file
+      shell: cat /tmp/sssd_data_collector.txt
+      register: sssd_data_content
+      run_once: true
+
     - name: Check SSSD configuration
       shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'"
       register: sssd_check_result
