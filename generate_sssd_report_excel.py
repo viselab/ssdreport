@@ -46,7 +46,7 @@ for value in sssd_values:
     start_row += 1  # Incrementa il numero di riga per ogni gruppo
 
 # Imposta la larghezza delle colonne per migliorare la leggibilità
-worksheet.set_column('A:C', 30)  # Aumenta se necessario
+worksheet.set_column('A:C', 40)  # Aumenta se necessario
 
 # Chiudi il file Excel
 workbook.close()
