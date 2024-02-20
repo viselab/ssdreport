@@ -2,36 +2,32 @@ import json
 import sys
 import xlsxwriter
 
-# Attempt to parse the JSON data passed from the Ansible playbook
-try:
-    sssd_data = json.loads(sys.argv[1])
-except json.JSONDecodeError as e:
-    print(f"Failed to parse JSON data: {e}")
-    sys.exit(1)
+# Load the SSSD data from the JSON input
+sssd_data = json.loads(sys.argv[1])
 
-# Define the path for the Excel report
+# Excel file path
 report_file = "/root/report/ADGroup_linux_report.xlsx"
 
-# Create the Excel workbook and worksheet
+# Create an Excel workbook and worksheet
 workbook = xlsxwriter.Workbook(report_file)
 worksheet = workbook.add_worksheet()
 
-# Define formats for the header and data cells
-header_format = workbook.add_format({'bold': True, 'bg_color': 'yellow', 'align': 'center'})
-data_format = workbook.add_format({'bg_color': 'cyan', 'align': 'center', 'valign': 'top', 'text_wrap': True})
+# Define the formatting
+header_format = workbook.add_format({'bold': True, 'align': 'center', 'bg_color': 'yellow'})
+data_format = workbook.add_format({'align': 'center', 'bg_color': 'cyan', 'text_wrap': True})
 
-# Write the header row
+# Write headers
 worksheet.write('A1', 'Hostname', header_format)
 worksheet.write('B1', 'AD Configuration Status', header_format)
 worksheet.write('C1', 'AD Group', header_format)
 
-# Start at the first data row
+# Write data
 row = 1
-for item in sssd_data:
-    worksheet.write(row, 0, item['hostname'], data_format)
-    worksheet.write(row, 1, item['status'], data_format)
-    worksheet.write(row, 2, item['values'], data_format)
+for entry in sssd_data:
+    worksheet.write(row, 0, entry['hostname'], data_format)
+    worksheet.write(row, 1, entry['status'], data_format)
+    worksheet.write(row, 2, ", ".join(entry['values']), data_format)
     row += 1
 
-# Close the workbook to finalize the Excel file
+# Close the workbook
 workbook.close()
