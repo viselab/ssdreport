@@ -35,9 +35,9 @@
       shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'"
       register: sssd_check_result
 
-    - name: Store results in a fact
+    - name: Store results in a fact on the localhost
       set_fact:
-        sssd_data: "{{ sssd_data | default([]) + [{ 'hostname': ansible_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout }] }}"
+        sssd_data: "{{ hostvars['localhost']['sssd_data'] | default([]) + [{ 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout }] }}"
       delegate_to: localhost
 
 - name: Generate a Single Excel report for all SSSD configurations
@@ -45,8 +45,7 @@
   gather_facts: false
   tasks:
     - name: Generate Excel report using Python script
-      command: "python3 /path/to/generate_sssd_report_excel.py '{{ sssd_data }}'"
-      delegate_to: localhost
+      command: "python3 /root/ssdreport/ad_report.yml '{{ sssd_data }}'"
 
 - name: Synchronize Excel Reports to the Local Machine
   hosts: web_servers
