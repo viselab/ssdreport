@@ -34,36 +34,24 @@
     - name: Check SSSD configuration
       shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'"
       register: sssd_check_result
+      changed_when: false
 
-    - name: Store results in a fact on the localhost
-      set_fact:
-        sssd_data_item: 
-          hostname: "{{ inventory_hostname }}"
-          status: "{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}"
-          values: "{{ sssd_check_result.stdout | default('N/A') }}"
-      delegate_to: localhost
-      run_once: true
-
-    - name: Combine all hosts' data on localhost
-      set_fact:
-        sssd_data: "{{ sssd_data | default([]) + [sssd_data_item] }}"
-      delegate_to: localhost
-      when: sssd_data_item is defined
-      run_once: true
+    - name: Debug SSSD configuration
+      debug:
+        msg: "{{ sssd_check_result.stdout }}"
 
 - name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
   gather_facts: false
+  vars:
+    sssd_data: "{{ hostvars | json_query('*.sssd_check_result.stdout') }}"
   tasks:
-    - name: Check if sssd_data is defined
-      fail:
-        msg: "sssd_data is not defined. Cannot generate report."
-      when: sssd_data is not defined
+    - name: Debug sssd_data
+      debug:
+        var: sssd_data
 
     - name: Generate Excel report using Python script
       command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
-      when: sssd_data is defined
-
 
 - name: Synchronize Excel Reports to the Local Machine
   hosts: localhost
