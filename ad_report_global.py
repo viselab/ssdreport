@@ -1,60 +1,55 @@
-import json
 import sys
 import xlsxwriter
+import json
 
-# Controlla se è stato fornito un argomento da riga di comando
-if len(sys.argv) < 2:
-    print("Usage: python generate_sssd_report_excel.py '<json_data>'")
-    sys.exit(1)
-
-# Carica i dati SSSD passati come stringa JSON dal primo argomento della riga di comando
+# Read the JSON string from the command line argument
 sssd_data_json = sys.argv[1]
+
 try:
+    # Convert the JSON string to a Python list of dictionaries
     sssd_data = json.loads(sssd_data_json)
 except json.JSONDecodeError as e:
-    print("Error decoding JSON: ", e)
+    print(f"Error decoding JSON: {e}")
     sys.exit(1)
 
-# Definisci il percorso del file Excel
+# Define the Excel report file path
 report_file = "/root/report/ADGroup_linux_report.xlsx"
 
-# Crea un nuovo file Excel e aggiungi un foglio di lavoro
+# Create a new Excel file and add a worksheet
 workbook = xlsxwriter.Workbook(report_file)
 worksheet = workbook.add_worksheet()
 
-# Imposta la formattazione delle intestazioni
+# Define formatting for headers and data
 header_format = workbook.add_format({
     'bold': True,
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': 'yellow',  # Sfondo giallo per le intestazioni
+    'bg_color': 'yellow',
     'border': 1
 })
-
-# Imposta la formattazione dei dati
 data_format = workbook.add_format({
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': 'cyan',  # Sfondo celeste per i dati
+    'bg_color': 'cyan',
     'border': 1,
-    'text_wrap': True  # Attiva il testo a capo automatico
+    'text_wrap': True
 })
 
-# Scrivi le intestazioni delle colonne
+# Write the headers to the first row
 worksheet.write('A1', 'Hostname', header_format)
 worksheet.write('B1', 'AD Configuration Status', header_format)
 worksheet.write('C1', 'AD Group', header_format)
 
-# Scrivi i dati di ogni host nel foglio
+# Start writing data from the second row
 row = 1
-for host_data in sssd_data:
-    worksheet.write(row, 0, host_data['hostname'], data_format)
-    worksheet.write(row, 1, host_data['status'], data_format)
-    worksheet.write(row, 2, host_data['values'], data_format)
-    row += 1  # Incrementa la riga per ogni host
+for entry in sssd_data:
+    worksheet.write(row, 0, entry['hostname'], data_format)
+    worksheet.write(row, 1, entry['status'], data_format)
+    worksheet.write(row, 2, ', '.join(entry['values']), data_format)
+    row += 1
 
-# Imposta la larghezza delle colonne
+# Set column widths
 worksheet.set_column('A:C', 30)
 
-# Chiudi il workbook per salvare il file Excel
+# Close the Excel file
 workbook.close()
