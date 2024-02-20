@@ -36,23 +36,24 @@
       register: sssd_check_result
       changed_when: false
 
-    - name: Debug SSSD configuration
-      debug:
-        msg: "{{ sssd_check_result.stdout }}"
+    - name: Store results in a fact on the localhost
+      set_fact:
+        sssd_data: "{{ sssd_data | default([]) + 
+          [{ 'hostname': inventory_hostname, 
+             'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 
+             'values': sssd_check_result.stdout | default('N/A') 
+          }] }}"
+      delegate_to: localhost
+      run_once: true
 
 - name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
   gather_facts: false
-  vars:
-    sssd_data: "{{ hostvars | json_query('*.sssd_check_result.stdout') }}"
   tasks:
-    - name: Debug sssd_data
-      debug:
-        var: sssd_data
-
     - name: Generate Excel report using Python script
       command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
-
+      run_once: true
+      
 - name: Synchronize Excel Reports to the Local Machine
   hosts: localhost
   gather_facts: false
