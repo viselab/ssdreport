@@ -56,7 +56,7 @@
 
     - name: Decode SSSD data
       set_fact:
-        sssd_data: "{{ sssd_data_file['content'] | b64decode | split('\n') | select('!=', '') | list }}"
+        sssd_data: "{{ sssd_data_file['content'] | b64decode.split('\n') | select('!=', '') | list }}"
 
     - name: Generate Excel report for SSSD configuration using Python script
       command: "python3 ad_report_global.py '{{ sssd_data | to_json }}'"
