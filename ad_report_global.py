@@ -6,7 +6,7 @@ import sys
 data = json.loads(sys.argv[1])
 
 # Definisci il percorso del file Excel
-report_file = "SSSD_Configuration_Report.xlsx"
+report_file = "/root/report/SSSD_Configuration_Report.xlsx"
 
 # Crea un nuovo file Excel e aggiungi un foglio di lavoro
 workbook = xlsxwriter.Workbook(report_file)
