@@ -1,4 +1,5 @@
-- name: Setup Environment for Excel Report Generation
+---
+- name: Raccogliere dati SSSD da tutti gli host
   hosts: web_servers
   become: yes
   tasks:
@@ -22,64 +23,23 @@
         state: present
       when: is_rhel_8_or_later
 
-    - name: Install XlsxWriter using pip3
-      pip:
-        name: XlsxWriter
-        executable: pip3
-
-- name: Initialize sssd_data on localhost
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Initialize an empty list for sssd_data
-      set_fact:
-        sssd_data: []
-
-- name: Gather SSSD Configuration Data from All Hosts
-  hosts: web_servers
-  gather_facts: false
-  tasks:
     - name: Check SSSD configuration
-      shell: >
-        grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'
+      shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
       register: sssd_check_result
-      changed_when: false
+      ignore_errors: true
 
-    - name: Append results to sssd_data list on localhost
+    - name: Collect SSSD configuration data
       set_fact:
-        sssd_data: "{{ sssd_data + [{ 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A') }] }}"
+        sssd_data: "{{ hostvars[inventory_hostname].sssd_data | default([]) + [{'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'groups': sssd_check_result.stdout | default('N/A')}] }}"
       delegate_to: localhost
       run_once: true
 
-- name: Generate a Single Excel report for all SSSD configurations
+- name: Genera un unico report Excel per tutti gli host
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ sssd_data | to_json }}'"
-
-- name: Generate a Single Excel report for all SSSD configurations
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Debug sssd_data
-      debug:
-        var: sssd_data
-
-    - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
-      
-- name: Synchronize Excel Reports to the Local Machine
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Synchronize Excel reports to the local machine
-      synchronize:
-        mode: pull
-        src: "{{ report_path_remote }}"
-        dest: "{{ report_path_local }}"
-        recursive: yes
-      run_once: true
+    - name: Generate Excel report for SSSD configuration using Python script
+      command: "python3 ad_report_global.py '{{ sssd_data | to_json }}'"
 
 - name: Commit Excel reports to Git repository
   hosts: localhost
