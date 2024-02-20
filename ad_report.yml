@@ -32,11 +32,18 @@
       register: sssd_check_result
       ignore_errors: yes
 
-    - name: Write SSSD data to a temp file on localhost
-      lineinfile:
-        path: "/tmp/sssd_data_temp"
-        line: "{{ inventory_hostname }}|{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}|{{ sssd_check_result.stdout | default('N/A') }}"
-      delegate_to: localhost
+ - name: Assicurati che il file temporaneo esista
+  ansible.builtin.file:
+    path: "/tmp/sssd_data_temp"
+    state: touch
+  delegate_to: localhost
+  run_once: true
+
+- name: Write SSSD data to a temp file on localhost
+  lineinfile:
+    path: "/tmp/sssd_data_temp"
+    line: "{{ inventory_hostname }}|{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}|{{ sssd_check_result.stdout | default('N/A') }}"
+  delegate_to: localhost
 
 - name: Generate Excel Report on Localhost
   hosts: localhost
