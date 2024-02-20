@@ -1,90 +1,63 @@
-- name: Generate AD group Reports
+- name: Prepare Environment for Excel Report Generation
   hosts: web_servers
-  gather_facts: yes
   tasks:
-    - name: Create destination directory if not exists
+    - name: Ensure pip is installed
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+
+    - name: Install XlsxWriter
+      ansible.builtin.pip:
+        name: XlsxWriter
+        state: present
+
+- name: Check SSSD Configuration and Generate Excel Report
+  hosts: web_servers
+  tasks:
+    - name: Create destination directory for reports
       ansible.builtin.file:
         path: "{{ report_path_remote }}"
         state: directory
 
-- name: Check SSSD configuration
-  hosts: web_servers
-  tasks:
     - name: Check SSSD configuration
       ansible.builtin.shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
       register: sssd_check_result
       ignore_errors: yes
 
-    - name: Save SSSD check result to a fact variable
-      set_fact:
-        sssd_configuration_status: "{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}"
-        sssd_configuration_value: "{{ sssd_check_result.stdout | default('N/A') }}"
-
-- name: Generate CSV report for SSSD configuration
-  hosts: web_servers
-  gather_facts: false
-  tasks:
-    - ansible.builtin.template:
-        src: sssd_report.j2
-        dest: "{{ report_path_remote }}/{{ ansible_hostname }}.sssd_report.csv"
-      vars:
-        sssd_configuration_status_data:
-          - hostname: "{{ ansible_hostname }}"
-            status: "{{ sssd_configuration_status }}"
-            value: "{{ sssd_configuration_value }}"
-
-- name: Generate Excel report for SSSD configuration
-  hosts: web_servers
-  gather_facts: false
-  tasks:
     - name: Generate Excel report for SSSD configuration
-      ansible.builtin.command: "python3 generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ sssd_configuration_status }}' '{{ sssd_configuration_value }}'"
+      ansible.builtin.command: "python3 generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
       delegate_to: localhost
       run_once: true
 
-- name: Synchronize CSV reports to the local machine
+- name: Synchronize Excel Reports to Local Machine
   hosts: web_servers
-  gather_facts: false
   tasks:
-    - name: Synchronize CSV reports to the local machine
+    - name: Synchronize Excel reports to the local machine
       ansible.builtin.synchronize:
-        mode: pull
         src: "{{ report_path_remote }}"
         dest: "{{ report_path_local }}"
-        recursive: yes
-        
-- name: Synchronize CSV reports to the local machine
-  hosts: web_servers
-  gather_facts: false
-  tasks:
-    - name: Synchronize CSV reports to the local machine
-      ansible.builtin.synchronize:
         mode: pull
-        src: "{{ report_path_remote }}"
-        dest: "{{ report_path_local }}"
-        recursive: yes
 
-- name: Commit CSV reports to Git repository
+- name: Commit Excel Reports to Git Repository
   hosts: localhost
-  gather_facts: false
   tasks:
-    - name: Add CSV reports to Git
+    - name: Add Excel reports to Git
       ansible.builtin.command:
         cmd: "git add ."
-      args:
-        chdir: "{{ report_path_local }}"
+        args:
+          chdir: "{{ report_path_local }}"
       ignore_errors: yes
 
-    - name: Commit CSV reports to Git
+    - name: Commit Excel reports to Git
       ansible.builtin.command:
-        cmd: "git commit -m 'Automatic update CSV Report'"
-      args:
-        chdir: "{{ report_path_local }}"
+        cmd: "git commit -m 'Automatic update Excel Report'"
+        args:
+          chdir: "{{ report_path_local }}"
       ignore_errors: yes
 
-    - name: Push CSV reports to Git
+    - name: Push Excel reports to Git
       ansible.builtin.command:
         cmd: "git push origin main"
-      args:
-        chdir: "{{ report_path_local }}"
+        args:
+          chdir: "{{ report_path_local }}"
       ignore_errors: yes
