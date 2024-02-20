@@ -65,12 +65,27 @@
         dest: "/root/report/"
         mode: pull
 
-  post_tasks:
-    - name: Commit Excel Reports to Git Repository
-      ansible.builtin.git:
-        repo: "{{ local_git_repo_path }}"
-        dest: "{{ report_path_local }}"
-        version: main
-        commit_message: "Updated Excel Reports"
-        force: yes
-      delegate_to: localhost
+- name: Commit CSV reports to Git repository
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Add CSV reports to Git
+      ansible.builtin.command:
+        cmd: "git add ."
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
+
+    - name: Commit CSV reports to Git
+      ansible.builtin.command:
+        cmd: "git commit -m 'Automatic update CSV Report'"
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
+
+    - name: Push CSV reports to Git
+      ansible.builtin.command:
+        cmd: "git push origin main"
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
