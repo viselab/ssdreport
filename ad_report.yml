@@ -60,7 +60,7 @@
 
     - name: Split SSSD data into lines and remove empty lines
       set_fact:
-        sssd_data: "{{ sssd_decoded.split('\n') | select('!=', '') | list }}"
+        sssd_data: "{{ sssd_decoded.split('\n') | map('trim') | select | list }}"
 
     - name: Generate Excel report for SSSD configuration using Python script
       command: "python3 ad_report_global.py '{{ sssd_data | to_json }}'"
