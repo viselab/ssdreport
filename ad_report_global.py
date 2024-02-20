@@ -46,7 +46,7 @@ for row, line in enumerate(data, start=1):
 # Imposta la larghezza delle colonne
 worksheet.set_column('A:A', 20)
 worksheet.set_column('B:B', 25)
-worksheet.set_column('C:C', 40)
+worksheet.set_column('C:C', 50)
 
 # Chiudi il workbook
 workbook.close()
