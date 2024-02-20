@@ -1,5 +1,5 @@
 ---
-- name: Raccogliere dati SSSD da tutti gli host
+- name: Setup Environment for Excel Report Generation
   hosts: web_servers
   become: yes
   tasks:
@@ -23,21 +23,34 @@
         state: present
       when: is_rhel_8_or_later
 
+- name: Check SSSD Configuration and Collect Data
+  hosts: web_servers
+  gather_facts: false
+  tasks:
     - name: Check SSSD configuration
       shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
       register: sssd_check_result
-      ignore_errors: true
+      ignore_errors: yes
 
     - name: Collect SSSD configuration data
       set_fact:
-        sssd_data: "{{ hostvars[inventory_hostname].sssd_data | default([]) + [{'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'groups': sssd_check_result.stdout | default('N/A')}] }}"
+        sssd_collect_data: "{{ {'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'groups': sssd_check_result.stdout | default('N/A')} }}"
+      delegate_to: localhost
+
+    - name: Aggregate SSSD data on localhost
+      set_fact:
+        sssd_data: "{{ sssd_data | default([]) + [sssd_collect_data] }}"
       delegate_to: localhost
       run_once: true
 
-- name: Genera un unico report Excel per tutti gli host
+- name: Generate Excel Report on Localhost
   hosts: localhost
   gather_facts: false
   tasks:
+    - name: Debug sssd_data variable
+      debug:
+        var: sssd_data
+
     - name: Generate Excel report for SSSD configuration using Python script
       command: "python3 ad_report_global.py '{{ sssd_data | to_json }}'"
 
