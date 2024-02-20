@@ -17,8 +17,8 @@ header_format = workbook.add_format({
     'bold': True,
     'align': 'center',
     'valign': 'vcenter',
-    'bg_color': '#00FFFF',  # RGB per ciano
-    'font_color': '#000000'  # RGB per nero
+    'bg_color': '#000000',  # RGB per ciano
+    'font_color': '#00FFFF'  # RGB per nero
 })
 data_format = workbook.add_format({
     'align': 'center',
