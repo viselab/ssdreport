@@ -47,30 +47,16 @@
 
     - name: Append results to sssd_data list on localhost
       set_fact:
-        sssd_item: "{{ {'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A')} }}"
+        sssd_data: "{{ sssd_data + [{ 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A') }] }}"
       delegate_to: localhost
-
-- name: Combine data on localhost
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Append item to sssd_data
-      set_fact:
-        sssd_data: "{{ sssd_data + [sssd_item] }}"
-      loop: "{{ ansible_play_hosts }}"
-      loop_control:
-        loop_var: sssd_item
+      run_once: true
 
 - name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Debug sssd_data
-      debug:
-        var: sssd_data
-
     - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
+      command: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ sssd_data | to_json }}'"
 
 - name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
