@@ -53,7 +53,6 @@
       ansible.builtin.command:
         cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
       delegate_to: localhost
-      run_once: true
 
 - name: Synchronize Excel Reports to Local Machine
   hosts: web_servers
