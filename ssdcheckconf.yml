@@ -1,11 +1,10 @@
 - name: Setup Environment for Excel Report Generation
   hosts: web_servers
-  become: yes  # Utilizza 'become' per ottenere i privilegi di root
+  become: yes
   tasks:
     - name: Determine RHEL version and appropriate Python interpreter
       ansible.builtin.set_fact:
         is_rhel_8_or_later: "{{ ansible_facts['distribution_major_version'] | int >= 8 }}"
-        ansible_python_interpreter: "/usr/bin/python{{ '3' if ansible_facts['distribution_major_version'] | int >= 8 else '' }}"  # Utilizza Python 3 per RHEL 8+ e Python 2 per RHEL 7
 
     - name: Install Python3 and pip for RHEL 7 using yum
       ansible.builtin.yum:
@@ -14,8 +13,6 @@
           - python36-pip
         state: present
       when: not is_rhel_8_or_later
-      vars:
-        ansible_python_interpreter: /usr/bin/python  # Forza l'uso di Python 2 per questo task su RHEL 7
 
     - name: Install Python3 and pip for RHEL 8 or later using dnf
       ansible.builtin.dnf:
@@ -28,17 +25,15 @@
     - name: Install XlsxWriter using pip3
       ansible.builtin.pip:
         name: XlsxWriter
-        executable: pip3  # Specifica esplicitamente di usare pip3
-      vars:
-        ansible_python_interpreter: /usr/bin/python3  # Assicurati che pip3 venga eseguito con Python 3
+        executable: pip3
 
 - name: Check SSSD Configuration and Generate Excel Report
   hosts: web_servers
   gather_facts: false
   tasks:
-    - name: Create destination directory for reports
+    - name: Create destination directory for reports on remote hosts
       ansible.builtin.file:
-        path: "{{ report_path_remote }}"
+        path: "/root/report"
         state: directory
 
     - name: Check SSSD configuration
@@ -47,22 +42,27 @@
       register: sssd_check_result
       ignore_errors: yes
 
-    - name: Generate Excel report for SSSD configuration using Python script
-      ansible.builtin.command:
-        cmd: "python3 generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+    - name: Create destination directory for reports on localhost
+      ansible.builtin.file:
+        path: "/root/report"
+        state: directory
       delegate_to: localhost
       run_once: true
-      vars:
-        ansible_python_interpreter: /usr/bin/python3  # Esegue lo script con Python 3
 
-- name: Synchronize and Commit Excel Reports
+    - name: Generate Excel report for SSSD configuration using Python script
+      ansible.builtin.command:
+        cmd: "python3 /path/to/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+      delegate_to: localhost
+      run_once: true
+
+- name: Synchronize Excel Reports to Local Machine
   hosts: web_servers
   gather_facts: false
   tasks:
-    - name: Synchronize Excel reports to the local machine
+    - name: Synchronize Excel reports from remote to local machine
       ansible.builtin.synchronize:
-        src: "{{ report_path_remote }}"
-        dest: "{{ report_path_local }}"
+        src: "/root/report/"
+        dest: "/root/report/"
         mode: pull
 
   post_tasks:
