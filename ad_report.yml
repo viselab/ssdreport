@@ -34,22 +34,24 @@
     - name: Check SSSD configuration
       shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'"
       register: sssd_check_result
+      changed_when: false
 
     - name: Store results on localhost
-      add_host:
-        name: "localhost"
-        groups: "sssd_reports"
+      set_fact:
         sssd_data: "{{ sssd_data | default([]) + [{ 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A') }] }}"
+      delegate_to: localhost
+      run_once: true
 
 - name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
   gather_facts: false
   tasks:
     - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
+      command: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ sssd_data | to_json }}'"
+      run_once: true
 
 - name: Synchronize Excel Reports to the Local Machine
-  hosts: web_servers
+  hosts: localhost
   gather_facts: false
   tasks:
     - name: Synchronize Excel reports to the local machine
@@ -58,7 +60,7 @@
         src: "{{ report_path_remote }}"
         dest: "{{ report_path_local }}"
         recursive: yes
-      delegate_to: localhost
+      run_once: true
 
 - name: Commit Excel reports to Git repository
   hosts: localhost
@@ -68,16 +70,16 @@
       command: "git add ."
       args:
         chdir: "{{ report_path_local }}"
-      ignore_errors: yes
+      run_once: true
 
     - name: Commit Excel reports to Git
       command: "git commit -m 'Automatic update Excel Report'"
       args:
         chdir: "{{ report_path_local }}"
-      ignore_errors: yes
+      run_once: true
 
     - name: Push Excel reports to Git
       command: "git push origin main"
       args:
         chdir: "{{ report_path_local }}"
-      ignore_errors: yes
+      run_once: true
