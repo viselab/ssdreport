@@ -1,51 +1,70 @@
-import xlsxwriter
+- name: Setup Environment for Excel Report Generation
+  hosts: web_servers
+  become: yes
+  tasks:
+    - name: Determine RHEL version and appropriate Python interpreter
+      ansible.builtin.set_fact:
+        is_rhel_8_or_later: "{{ ansible_facts['distribution_major_version'] | int >= 8 }}"
+    - name: Install Python3 and pip for RHEL 7 using yum
+      ansible.builtin.yum:
+        name:
+          - python36
+          - python36-pip
+        state: present
+      when: not is_rhel_8_or_later
+    - name: Install Python3 and pip for RHEL 8 or later using dnf
+      ansible.builtin.dnf:
+        name:
+          - python3
+          - python3-pip
+        state: present
+      when: is_rhel_8_or_later
+    - name: Install XlsxWriter using pip3
+      ansible.builtin.pip:
+        name: XlsxWriter
+        executable: pip3
+- name: Check SSSD Configuration and Generate Excel Report
+  hosts: web_servers
+  gather_facts: false
+  tasks:
+    - name: Create destination directory for reports on remote hosts
+      ansible.builtin.file:
+        path: "/root/report"
+        state: directory
+    - name: Check SSSD configuration
+      ansible.builtin.shell:
+        cmd: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3"
+      register: sssd_check_result
+      ignore_errors: yes
+    - name: Create destination directory for reports on localhost
+      ansible.builtin.file:
+        path: "/root/report"
+        state: directory
+      delegate_to: localhost
+      run_once: true
+    - name: Generate Excel report for SSSD configuration using Python script
+      ansible.builtin.command:
+        cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+      delegate_to: localhost
+      run_once: true
 
-# Ipotizziamo di ricevere i dati da qualche parte del tuo script o del tuo playbook Ansible
-hostname = 'rhel7to8-02'
-sssd_status = 'Config OK'
-sssd_values = ['GSS_Unix_Administrators', 'GRA_PREP_ADOPT_Admins@adgr.net', 'GRAP_ADOPT_PREP_EXT@adgr.net']
-
-# Definisci il percorso del file Excel
-report_file = f"/root/report/{hostname}_sssd_report.xlsx"
-
-# Crea un nuovo file Excel e aggiungi un foglio di lavoro
-workbook = xlsxwriter.Workbook(report_file)
-worksheet = workbook.add_worksheet()
-
-# Imposta la formattazione delle intestazioni
-header_format = workbook.add_format({
-    'bold': True,
-    'align': 'center',
-    'valign': 'vcenter',
-    'bg_color': '#FFFF00',  # Giallo
-    'border': 1
-})
-
-# Imposta la formattazione dei dati
-data_format = workbook.add_format({
-    'align': 'center',
-    'valign': 'vcenter',
-    'bg_color': '#00B0F0',  # Celeste
-    'border': 1
-})
-
-# Scrivi le intestazioni delle colonne con la formattazione delle intestazioni
-worksheet.write('A1', 'Hostname', header_format)
-worksheet.write('B1', 'AD Configuration Status', header_format)
-worksheet.write('C1', 'AD Group', header_format)
-
-# Scrivi i dati con la formattazione dei dati
-worksheet.write('A2', hostname, data_format)
-worksheet.write('B2', sssd_status, data_format)
-
-# Scrivi ogni gruppo AD in una nuova riga
-for row_num, group in enumerate(sssd_values, start=2):
-    worksheet.write(row_num, 2, group, data_format)
-
-# Imposta la larghezza delle colonne per migliorare la leggibilità
-worksheet.set_column('A:A', 20)
-worksheet.set_column('B:B', 25)
-worksheet.set_column('C:C', 40)
-
-# Chiudi il file Excel
-workbook.close()
+- name: Synchronize Excel Reports to Local Machine
+  hosts: web_servers
+  gather_facts: false
+  tasks:
+    - name: Synchronize Excel reports from remote to local machine
+      ansible.builtin.synchronize:
+        src: "{{report_path_remote}}"
+        dest: "{{ report_path_local }}"
+        mode: pull
+- name: Commit CSV reports to Git repository
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Add CSV reports to Git
+      ansible.builtin.command:
+        cmd: "git add ."
+      args:
+        chdir: "{{ report_path_local }}"
+      ignore_errors: yes
+    - name: Commit CSV reports to Git
