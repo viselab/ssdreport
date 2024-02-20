@@ -44,7 +44,7 @@ for line in sssd_data_lines:
         row += 1
 
 # Imposta la larghezza delle colonne per la leggibilità
-worksheet.set_column('A:C', 30)
+worksheet.set_column('A:C', 50)
 
 # Chiudi il workbook per salvare il file Excel
 workbook.close()
