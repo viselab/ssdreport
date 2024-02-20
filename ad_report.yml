@@ -27,6 +27,14 @@
         name: XlsxWriter
         executable: pip3
 
+- name: Initialize sssd_data on localhost
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Initialize an empty list for sssd_data
+      set_fact:
+        sssd_data: []
+
 - name: Gather SSSD Configuration Data from All Hosts
   hosts: web_servers
   gather_facts: false
@@ -37,19 +45,23 @@
       register: sssd_check_result
       changed_when: false
 
-    - name: Store results in a fact on the localhost
+    - name: Append results to sssd_data list on localhost
       set_fact:
-        sssd_data: "{{ hostvars['localhost']['sssd_data'] | default([]) +
-          [{ 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A') }] }}"
+        sssd_data_item: "{ 'hostname': inventory_hostname, 'status': 'Config OK' if sssd_check_result.rc == 0 else 'Config Error', 'values': sssd_check_result.stdout | default('N/A') }"
       delegate_to: localhost
-      run_once: true
+
+    - name: Combine data on localhost
+      set_fact:
+        sssd_data: "{{ sssd_data + [sssd_data_item] }}"
+      delegate_to: localhost
+      when: sssd_data_item is defined
 
 - name: Generate a Single Excel report for all SSSD configurations
   hosts: localhost
   gather_facts: false
   tasks:
     - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/ad_report_global.py '{{ hostvars['localhost']['sssd_data'] | to_json }}'"
+      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
       run_once: true
       
 - name: Synchronize Excel Reports to the Local Machine
