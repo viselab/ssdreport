@@ -36,10 +36,10 @@
       register: sssd_check_result
       ignore_errors: yes
 
-    - name: Generate Excel report for SSSD configuration using Python script
-      local_action:
-        module: command
-        cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ inventory_hostname }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+- name: Generate Excel report for SSSD configuration using Python script
+  ansible.builtin.command:
+    cmd: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ ansible_hostname }}' '{{ 'Config OK' }}' '{{ sssd_check_result.stdout | default('N/A') }}'"
+  delegate_to: localhost
 
 - name: Synchronize CSV reports to the local machine
   hosts: web_servers
