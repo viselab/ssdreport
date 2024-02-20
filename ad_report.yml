@@ -47,7 +47,7 @@
   gather_facts: false
   tasks:
     - name: Generate Excel report using Python script
-      command: "python3 /root/ssdreport/generate_sssd_report_excel.py '{{ sssd_data | to_json }}'"
+      command: "python3 /root/ssdreport/ad_report_global.py '{{ sssd_data | to_json }}'"
       run_once: true
 
 - name: Synchronize Excel Reports to the Local Machine
