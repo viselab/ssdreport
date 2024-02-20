@@ -31,6 +31,13 @@
   hosts: web_servers
   gather_facts: false
   tasks:
+    - name: Ensure the collector file exists
+      file:
+        path: /tmp/sssd_data_collector.txt
+        state: touch
+      delegate_to: localhost
+      run_once: true
+
     - name: Check SSSD configuration
       shell: "grep -i '^simple_allow_groups' /etc/sssd/sssd.conf | cut -d' ' -f3 || echo 'N/A'"
       register: sssd_check_result
@@ -38,19 +45,9 @@
 
     - name: Collect SSSD check results
       lineinfile:
-        path: "/tmp/sssd_data_collector.txt"
+        path: /tmp/sssd_data_collector.txt
         line: "{{ inventory_hostname }}:{{ 'Config OK' if sssd_check_result.rc == 0 else 'Config Error' }}:{{ sssd_check_result.stdout | default('N/A') }}"
       delegate_to: localhost
-
-- name: Generate a Single Excel report for all SSSD configurations
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Fetch SSSD data from the temporary collector file
-      fetch:
-        src: "/tmp/sssd_data_collector.txt"
-        dest: "/tmp/"
-        flat: yes
 
     - name: Read SSSD data into a variable
       shell: "cat /tmp/sssd_data_collector.txt"
