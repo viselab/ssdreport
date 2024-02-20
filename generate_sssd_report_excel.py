@@ -16,8 +16,8 @@ worksheet = workbook.add_worksheet()
 # Imposta le intestazioni delle colonne e la formattazione
 header_format = workbook.add_format({'bold': True, 'font_color': 'blue'})
 worksheet.write('A1', 'Hostname', header_format)
-worksheet.write('B1', 'SSSD Configuration Status', header_format)
-worksheet.write('C1', 'SSSD Configuration Values', header_format)
+worksheet.write('B1', 'AD Configuration Status', header_format)
+worksheet.write('C1', 'AD Group ', header_format)
 
 # Aggiungi i dati nelle celle con formattazione
 data_format = workbook.add_format({'text_wrap': True})
